@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mortgage DTI Calculator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0c0f14;
+    --surface: #141820;
+    --surface-2: #1a1f2b;
+    --surface-3: #222838;
+    --border: #2a3040;
+    --border-focus: #4a7cff;
+    --text: #e8ecf4;
+    --text-muted: #8892a8;
+    --text-dim: #5a6478;
+    --accent: #4a7cff;
+    --accent-glow: rgba(74, 124, 255, 0.15);
+    --green: #34d399;
+    --green-bg: rgba(52, 211, 153, 0.08);
+    --green-border: rgba(52, 211, 153, 0.25);
+    --yellow: #fbbf24;
+    --yellow-bg: rgba(251, 191, 36, 0.08);
+    --yellow-border: rgba(251, 191, 36, 0.25);
+    --red: #f87171;
+    --red-bg: rgba(248, 113, 113, 0.08);
+    --red-border: rgba(248, 113, 113, 0.25);
+    --remove: #ef4444;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
+  }
+
+  html { font-size: 15px; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app-header {
+    padding: 28px 24px 20px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(74,124,255,0.04) 0%, transparent 100%);
+  }
+  .app-header h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .app-header h1 span { color: var(--accent); }
+  .app-header p {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .layout {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 20px 16px 80px;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .main-col { display: flex; flex-direction: column; gap: 16px; }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+  .card-header h2 {
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-header h2 .icon {
+    width: 18px; height: 18px;
+    background: var(--accent);
+    border-radius: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #fff;
+  }
+  .card-body { padding: 18px; }
+
+  /* Form Grid */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .form-grid .full { grid-column: 1 / -1; }
+
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+  }
+  .field .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .field .input-wrap .prefix,
+  .field .input-wrap .suffix {
+    position: absolute;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    pointer-events: none;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .field .input-wrap .prefix { left: 10px; }
+  .field .input-wrap .suffix { right: 10px; }
+
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88rem;
+    color: var(--text);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    outline: none;
+  }
+  input:focus, select:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  input.has-prefix { padding-left: 24px; }
+  input.has-suffix { padding-right: 30px; }
+
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238892a8'%3E%3Cpath d='M6 8.5L1 3.5h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+    cursor: pointer;
+  }
+
+  .computed-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--accent);
+    background: var(--accent-glow);
+    border: 1px solid rgba(74,124,255,0.2);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    min-height: 38px;
+    display: flex; align-items: center;
+  }
+
+  .pmi-hint {
+    font-size: 0.72rem;
+    color: var(--yellow);
+    margin-top: 2px;
+    display: none;
+  }
+  .pmi-hint.visible { display: block; }
+
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+  .total-row .label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .total-row .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  /* Dynamic Lists */
+  .list-table { width: 100%; }
+  .list-table-head {
+    display: grid;
+    gap: 8px;
+    padding: 0 0 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .list-table-head span {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+  }
+  .cc-head { grid-template-columns: 1.5fr 1fr 1fr 1fr 36px; }
+  .debt-head { grid-template-columns: 1fr 1fr 1fr 36px; }
+
+  .list-row {
+    display: grid;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 0;
+    animation: fadeIn 0.2s ease;
+  }
+  .cc-row { grid-template-columns: 1.5fr 1fr 1fr 1fr 36px; }
+  .debt-row { grid-template-columns: 1fr 1fr 1fr 36px; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .list-row input, .list-row select {
+    padding: 7px 8px;
+    font-size: 0.8rem;
+  }
+
+  /* List row currency inputs: $ is inline, not absolute */
+  .list-row .input-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    overflow: hidden;
+  }
+  .list-row .input-wrap:focus-within {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .list-row .input-wrap .prefix {
+    position: static;
+    padding-left: 8px;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+  }
+  .list-row .input-wrap input {
+    border: none;
+    background: transparent;
+    padding-left: 4px;
+    box-shadow: none !important;
+  }
+  .list-row .input-wrap input:focus {
+    border: none;
+    box-shadow: none !important;
+  }
+
+  .btn-remove {
+    width: 32px; height: 32px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    font-size: 16px;
+  }
+  .btn-remove:hover {
+    background: var(--red-bg);
+    border-color: var(--red-border);
+    color: var(--remove);
+  }
+
+  .btn-add {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 10px;
+    padding: 8px 14px;
+    background: var(--accent-glow);
+    border: 1px solid rgba(74,124,255,0.25);
+    border-radius: var(--radius-sm);
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-add:hover {
+    background: rgba(74,124,255,0.2);
+    border-color: rgba(74,124,255,0.4);
+  }
+
+  /* Sticky Summary Panel */
+  .summary-col { position: sticky; top: 20px; }
+
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .summary-card .card-header {
+    background: linear-gradient(135deg, var(--surface-2), var(--surface-3));
+  }
+
+  .dti-block {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .dti-block:last-child { border-bottom: none; }
+  .dti-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .dti-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.9rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    transition: color 0.3s;
+  }
+  .dti-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--surface-3);
+    margin-top: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+  .dti-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s cubic-bezier(0.16,1,0.3,1), background 0.3s;
+    min-width: 2px;
+  }
+  .dti-range-label {
+    display: flex; justify-content: space-between;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  .summary-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-line:last-child { border-bottom: none; }
+  .summary-line .sl-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+  .summary-line .sl-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .summary-line .sl-value.positive { color: var(--green); }
+  .summary-line .sl-value.negative { color: var(--red); }
+
+  .btn-clear {
+    display: block;
+    width: calc(100% - 36px);
+    margin: 16px 18px;
+    padding: 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-clear:hover {
+    border-color: var(--red-border);
+    color: var(--remove);
+    background: var(--red-bg);
+  }
+
+  .color-green { color: var(--green) !important; }
+  .color-yellow { color: var(--yellow) !important; }
+  .color-red { color: var(--red) !important; }
+  .bar-green { background: var(--green) !important; }
+  .bar-yellow { background: var(--yellow) !important; }
+  .bar-red { background: var(--red) !important; }
+
+  .empty-state {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-dim);
+    font-size: 0.82rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 960px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+    .summary-col {
+      position: relative;
+      top: 0;
+      order: -1;
+    }
+  }
+  @media (max-width: 600px) {
+    html { font-size: 14px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .cc-head, .cc-row { grid-template-columns: 1fr 1fr; }
+    .debt-head, .debt-row { grid-template-columns: 1fr 1fr; }
+    .cc-head span:nth-child(n+3), .debt-head span:nth-child(n+3) { display: none; }
+    .list-row { gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .card-body { padding: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <h1><span>DTI</span> Mortgage Calculator</h1>
+  <p>Debt-to-Income Ratio &bull; Real-time Analysis</p>
+</div>
+
+<div class="layout">
+  <div class="main-col">
+
+    <!-- INCOME -->
+    <div class="card">
+      <div class="card-header"><h2><span class="icon">$</span> Monthly Income</h2></div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label>Gross Monthly Income</label>
+            <div class="input-wrap">
+              <span class="prefix">$</span>
+              <input type="text" id="income" class="currency-input has-prefix" data-key="income" placeholder="0">
+            </div>
+          </div>
+          <div class="field">
+            <label>Co-Borrower Income (optional)</label>
+            <div class="input-wrap">
+              <span class="prefix">$</span>
+              <input type="text" id="coIncome" class="currency-input has-prefix" data-key="coIncome" placeholder="0">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="total-row">
+        <span class="label">Combined Gross Income</span>
+        <span class="value" id="totalIncome">$0</span>
+      </div>
+    </div>
+
+    <!-- HOUSING -->
+    <div class="card">
+      <div class="card-header"><h2><span class="icon">⌂</span> New Home Details</h2></div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label>Purchase Price</label>
+            <div class="input-wrap">
+              <span class="prefix">$</span>
+              <input type="text" id="purchasePrice" class="currency-input has-prefix" data-key="purchasePrice" placeholder="0">
+            </div>
+          </div>
+          <div class="field">
+            <label>Down Payment</label>
+            <div class="input-wrap">
+              <span class="prefix">$</span>
+              <input type="text" id="downPayment" class="currency-input has-prefix" data-key="downPayment" placeholder="0">
+            </div>
+          </div>
+          <div class="field">
+            <label>Down Payment %</label>
+            <div class="computed-value" id="downPct">0.0%</div>
+          </div>
+          <div class="field">
+            <label>Loan Amount</label>
+            <div class="computed-value" id="loanAmount">$0</div>
+          </div>
+          <div class="field">
+            <label>Loan Term</label>
+            <select id="loanTerm" data-key="loanTerm">
+              <option value="360">30 years</option>
+              <option value="240">20 years</option>
+              <option value="180">15 years</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Interest Rate</label>
+            <div class="input-wrap">
+              <input type="text" id="interestRate" class="has-suffix" data-key="interestRate" placeholder="6.5">
+              <span class="suffix">%</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Est. P&amp;I (monthly)</label>
+            <div class="computed-value" id="piPayment">$0</div>
+          </div>
+          <div class="field">
+            <label>Property Tax (monthly)</label>
+            <div class="input-wrap">
+              <span class="prefix">$</span>
+              <input type="text" id="propTax" class="currency-input has-prefix" data-key="propTax" placeholder="0">
+            </div>
+          </div>
+          <div class="field">
+            <label>Homeowner's Insurance (monthly)</label>
+            <div class="input-wrap">
+              <span class="prefix">$</span>
+              <input type="text" id="insurance" class="currency-input has-prefix" data-key="insurance" placeholder="0">
+            </div>
+          </div>
+          <div class="field">
+            <label>HOA (monthly, optional)</label>
+            <div class="input-wrap">
+              <span class="prefix">$</span>
+              <input type="text" id="hoa" class="currency-input has-prefix" data-key="hoa" placeholder="0">
+            </div>
+          </div>
+          <div class="field">
+            <label>PMI (monthly, optional)</label>
+            <div class="input-wrap">
+              <span class="prefix">$</span>
+              <input type="text" id="pmi" class="currency-input has-prefix" data-key="pmi" placeholder="0">
+            </div>
+            <div class="pmi-hint" id="pmiHint">⚠ Down payment &lt; 20% — PMI likely required</div>
+          </div>
+        </div>
+      </div>
+      <div class="total-row">
+        <span class="label">Total PITI + HOA + PMI</span>
+        <span class="value" id="totalPITI">$0</span>
+      </div>
+    </div>
+
+    <!-- CREDIT CARDS -->
+    <div class="card">
+      <div class="card-header">
+        <h2><span class="icon">◎</span> Credit Cards</h2>
+      </div>
+      <div class="card-body">
+        <div class="list-table">
+          <div class="list-table-head cc-head">
+            <span>Card Name</span>
+            <span>Limit</span>
+            <span>Balance</span>
+            <span>Min. Payment</span>
+            <span></span>
+          </div>
+          <div id="ccRows"></div>
+        </div>
+        <button class="btn-add" id="addCC">+ Add Card</button>
+      </div>
+      <div class="total-row">
+        <span class="label">Total CC Minimums</span>
+        <span class="value" id="totalCC">$0</span>
+      </div>
+    </div>
+
+    <!-- OTHER DEBTS -->
+    <div class="card">
+      <div class="card-header">
+        <h2><span class="icon">≡</span> Other Monthly Debts</h2>
+      </div>
+      <div class="card-body">
+        <div class="list-table">
+          <div class="list-table-head debt-head">
+            <span>Category</span>
+            <span>Debt Name</span>
+            <span>Monthly Pmt</span>
+            <span></span>
+          </div>
+          <div id="debtRows"></div>
+        </div>
+        <button class="btn-add" id="addDebt">+ Add Debt</button>
+      </div>
+      <div class="total-row">
+        <span class="label">Total Other Debts</span>
+        <span class="value" id="totalDebts">$0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary-col">
+    <div class="summary-card">
+      <div class="card-header"><h2><span class="icon">◆</span> DTI Analysis</h2></div>
+
+      <div class="dti-block">
+        <div class="dti-label">Front-End DTI (Housing)</div>
+        <div class="dti-value" id="frontDTI">0.0%</div>
+        <div class="dti-bar"><div class="dti-bar-fill" id="frontBar" style="width:0"></div></div>
+        <div class="dti-range-label"><span>0%</span><span>28% ideal</span><span>50%+</span></div>
+      </div>
+
+      <div class="dti-block">
+        <div class="dti-label">Back-End DTI (All Debts)</div>
+        <div class="dti-value" id="backDTI">0.0%</div>
+        <div class="dti-bar"><div class="dti-bar-fill" id="backBar" style="width:0"></div></div>
+        <div class="dti-range-label"><span>0%</span><span>36% ideal</span><span>50%+</span></div>
+      </div>
+
+      <div class="summary-line">
+        <span class="sl-label">Total PITI</span>
+        <span class="sl-value" id="sumPITI">$0</span>
+      </div>
+      <div class="summary-line">
+        <span class="sl-label">Total Non-Housing Debts</span>
+        <span class="sl-value" id="sumNonHousing">$0</span>
+      </div>
+      <div class="summary-line">
+        <span class="sl-label">Total Monthly Obligations</span>
+        <span class="sl-value" id="sumTotal">$0</span>
+      </div>
+      <div class="summary-line">
+        <span class="sl-label">Remaining Income</span>
+        <span class="sl-value" id="sumRemaining">$0</span>
+      </div>
+
+      <button class="btn-clear" id="btnClear">Clear All Data</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ─── LocalStorage helpers ───
+  const STORE_KEY = 'dti_calc_data';
+
+  function loadStore() {
+    try {
+      return JSON.parse(localStorage.getItem(STORE_KEY)) || getDefaults();
+    } catch { return getDefaults(); }
+  }
+
+  function saveStore(data) {
+    localStorage.setItem(STORE_KEY, JSON.stringify(data));
+  }
+
+  function getDefaults() {
+    return {
+      income: '', coIncome: '',
+      purchasePrice: '', downPayment: '',
+      loanTerm: '360', interestRate: '',
+      propTax: '', insurance: '', hoa: '', pmi: '',
+      creditCards: [],
+      debts: []
+    };
+  }
+
+  let store = loadStore();
+
+  // ─── Currency formatting ───
+  function fmt(n) {
+    if (isNaN(n) || n === null || n === undefined) return '$0';
+    return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+  function fmtCents(n) {
+    if (isNaN(n) || n === null || n === undefined) return '$0.00';
+    return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function parseCurrency(str) {
+    if (!str) return 0;
+    return parseFloat(String(str).replace(/[^0-9.\-]/g, '')) || 0;
+  }
+
+  // ─── Field I/O ───
+  function setField(id, val) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = val;
+  }
+
+  function getNum(id) {
+    return parseCurrency(document.getElementById(id)?.value);
+  }
+
+  // ─── Populate scalar fields from store ───
+  function populateScalars() {
+    ['income','coIncome','purchasePrice','downPayment','interestRate','propTax','insurance','hoa','pmi'].forEach(k => {
+      setField(k, store[k] || '');
+    });
+    document.getElementById('loanTerm').value = store.loanTerm || '360';
+  }
+
+  // ─── Credit Cards ───
+  let ccIdCounter = 0;
+  const ccContainer = document.getElementById('ccRows');
+
+  function renderCC() {
+    ccContainer.innerHTML = '';
+    store.creditCards.forEach((cc, i) => {
+      ccContainer.appendChild(createCCRow(cc, i));
+    });
+  }
+
+  function createCCRow(cc, idx) {
+    const row = document.createElement('div');
+    row.className = 'list-row cc-row';
+    row.innerHTML = `
+      <input type="text" value="${esc(cc.name)}" data-cc="${idx}" data-field="name" placeholder="Card name">
+      <div class="input-wrap"><span class="prefix">$</span><input type="text" class="currency-input" value="${cc.limit}" data-cc="${idx}" data-field="limit" placeholder="0"></div>
+      <div class="input-wrap"><span class="prefix">$</span><input type="text" class="currency-input" value="${cc.balance}" data-cc="${idx}" data-field="balance" placeholder="0"></div>
+      <div class="input-wrap"><span class="prefix">$</span><input type="text" class="currency-input" value="${cc.minPay}" data-cc="${idx}" data-field="minPay" placeholder="0"></div>
+      <button class="btn-remove" data-cc-remove="${idx}" title="Remove">&times;</button>
+    `;
+    return row;
+  }
+
+  document.getElementById('addCC').addEventListener('click', () => {
+    store.creditCards.push({ name: '', limit: '', balance: '', minPay: '' });
+    saveStore(store);
+    renderCC();
+    recalc();
+  });
+
+  ccContainer.addEventListener('input', e => {
+    const t = e.target;
+    const idx = t.dataset.cc;
+    const field = t.dataset.field;
+    if (idx !== undefined && field) {
+      store.creditCards[idx][field] = t.value;
+      saveStore(store);
+      recalc();
+    }
+  });
+
+  ccContainer.addEventListener('click', e => {
+    const btn = e.target.closest('[data-cc-remove]');
+    if (btn) {
+      store.creditCards.splice(parseInt(btn.dataset.ccRemove), 1);
+      saveStore(store);
+      renderCC();
+      recalc();
+    }
+  });
+
+  // ─── Other Debts ───
+  const debtContainer = document.getElementById('debtRows');
+  const DEBT_CATEGORIES = ['Student Loans','Auto Loan','Personal Loan','Child Support','Alimony','Other'];
+
+  function renderDebts() {
+    debtContainer.innerHTML = '';
+    store.debts.forEach((d, i) => {
+      debtContainer.appendChild(createDebtRow(d, i));
+    });
+  }
+
+  function createDebtRow(d, idx) {
+    const row = document.createElement('div');
+    row.className = 'list-row debt-row';
+    const opts = DEBT_CATEGORIES.map(c => `<option value="${c}"${d.category === c ? ' selected' : ''}>${c}</option>`).join('');
+    row.innerHTML = `
+      <select data-debt="${idx}" data-field="category">${opts}</select>
+      <input type="text" value="${esc(d.name)}" data-debt="${idx}" data-field="name" placeholder="Debt name">
+      <div class="input-wrap"><span class="prefix">$</span><input type="text" class="currency-input" value="${d.payment}" data-debt="${idx}" data-field="payment" placeholder="0"></div>
+      <button class="btn-remove" data-debt-remove="${idx}" title="Remove">&times;</button>
+    `;
+    return row;
+  }
+
+  document.getElementById('addDebt').addEventListener('click', () => {
+    store.debts.push({ category: 'Student Loans', name: '', payment: '' });
+    saveStore(store);
+    renderDebts();
+    recalc();
+  });
+
+  debtContainer.addEventListener('input', e => {
+    const t = e.target;
+    const idx = t.dataset.debt;
+    const field = t.dataset.field;
+    if (idx !== undefined && field) {
+      store.debts[idx][field] = t.value;
+      saveStore(store);
+      recalc();
+    }
+  });
+
+  debtContainer.addEventListener('change', e => {
+    const t = e.target;
+    const idx = t.dataset.debt;
+    const field = t.dataset.field;
+    if (idx !== undefined && field) {
+      store.debts[idx][field] = t.value;
+      saveStore(store);
+    }
+  });
+
+  debtContainer.addEventListener('click', e => {
+    const btn = e.target.closest('[data-debt-remove]');
+    if (btn) {
+      store.debts.splice(parseInt(btn.dataset.debtRemove), 1);
+      saveStore(store);
+      renderDebts();
+      recalc();
+    }
+  });
+
+  // ─── Scalar inputs → save + recalc ───
+  document.querySelectorAll('[data-key]').forEach(el => {
+    el.addEventListener('input', () => {
+      store[el.dataset.key] = el.value;
+      saveStore(store);
+      recalc();
+    });
+    el.addEventListener('change', () => {
+      store[el.dataset.key] = el.value;
+      saveStore(store);
+      recalc();
+    });
+  });
+
+  // ─── Currency formatting on blur/focus ───
+  document.addEventListener('focus', e => {
+    if (e.target.classList?.contains('currency-input')) {
+      const raw = parseCurrency(e.target.value);
+      e.target.value = raw || '';
+    }
+  }, true);
+
+  document.addEventListener('blur', e => {
+    if (e.target.classList?.contains('currency-input')) {
+      const raw = parseCurrency(e.target.value);
+      if (raw) {
+        e.target.value = raw.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      }
+      // Also save
+      const key = e.target.dataset.key;
+      if (key) { store[key] = e.target.value; saveStore(store); }
+      const ccIdx = e.target.dataset.cc;
+      const ccField = e.target.dataset.field;
+      if (ccIdx !== undefined && ccField) { store.creditCards[ccIdx][ccField] = e.target.value; saveStore(store); }
+      const dIdx = e.target.dataset.debt;
+      const dField = e.target.dataset.field;
+      if (dIdx !== undefined && dField) { store.debts[dIdx][dField] = e.target.value; saveStore(store); }
+    }
+  }, true);
+
+  // ─── Calculate P&I ───
+  function calcPI(principal, annualRate, months) {
+    if (principal <= 0 || months <= 0) return 0;
+    if (annualRate <= 0) return principal / months;
+    const r = annualRate / 100 / 12;
+    return principal * (r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+  }
+
+  // ─── Master recalc ───
+  function recalc() {
+    const inc = parseCurrency(store.income);
+    const coInc = parseCurrency(store.coIncome);
+    const totalIncome = inc + coInc;
+
+    document.getElementById('totalIncome').textContent = fmt(totalIncome);
+
+    // Housing
+    const price = parseCurrency(store.purchasePrice);
+    const down = parseCurrency(store.downPayment);
+    const loanAmt = Math.max(0, price - down);
+    const downPct = price > 0 ? (down / price) * 100 : 0;
+    const months = parseInt(store.loanTerm) || 360;
+    const rate = parseFloat(store.interestRate) || 0;
+    const pi = calcPI(loanAmt, rate, months);
+    const tax = parseCurrency(store.propTax);
+    const ins = parseCurrency(store.insurance);
+    const hoa = parseCurrency(store.hoa);
+    const pmi = parseCurrency(store.pmi);
+
+    document.getElementById('downPct').textContent = downPct.toFixed(1) + '%';
+    document.getElementById('loanAmount').textContent = fmt(loanAmt);
+    document.getElementById('piPayment').textContent = fmtCents(pi);
+
+    const pmiHint = document.getElementById('pmiHint');
+    if (price > 0 && downPct < 20) {
+      pmiHint.classList.add('visible');
+    } else {
+      pmiHint.classList.remove('visible');
+    }
+
+    const totalPITI = pi + tax + ins + hoa + pmi;
+    document.getElementById('totalPITI').textContent = fmtCents(totalPITI);
+
+    // Credit Cards
+    let totalCCMin = 0;
+    store.creditCards.forEach(cc => { totalCCMin += parseCurrency(cc.minPay); });
+    document.getElementById('totalCC').textContent = fmt(totalCCMin);
+
+    // Other Debts
+    let totalOtherDebts = 0;
+    store.debts.forEach(d => { totalOtherDebts += parseCurrency(d.payment); });
+    document.getElementById('totalDebts').textContent = fmt(totalOtherDebts);
+
+    // DTI
+    const nonHousing = totalCCMin + totalOtherDebts;
+    const totalObligations = totalPITI + nonHousing;
+    const remaining = totalIncome - totalObligations;
+
+    const frontDTI = totalIncome > 0 ? (totalPITI / totalIncome) * 100 : 0;
+    const backDTI = totalIncome > 0 ? (totalObligations / totalIncome) * 100 : 0;
+
+    // Front-end DTI display
+    const frontEl = document.getElementById('frontDTI');
+    frontEl.textContent = frontDTI.toFixed(1) + '%';
+    frontEl.className = 'dti-value ' + (frontDTI <= 28 ? 'color-green' : frontDTI <= 31 ? 'color-yellow' : 'color-red');
+
+    const frontBarEl = document.getElementById('frontBar');
+    frontBarEl.style.width = Math.min(frontDTI, 55) / 55 * 100 + '%';
+    frontBarEl.className = 'dti-bar-fill ' + (frontDTI <= 28 ? 'bar-green' : frontDTI <= 31 ? 'bar-yellow' : 'bar-red');
+
+    // Back-end DTI display
+    const backEl = document.getElementById('backDTI');
+    backEl.textContent = backDTI.toFixed(1) + '%';
+    backEl.className = 'dti-value ' + (backDTI <= 36 ? 'color-green' : backDTI <= 43 ? 'color-yellow' : 'color-red');
+
+    const backBarEl = document.getElementById('backBar');
+    backBarEl.style.width = Math.min(backDTI, 55) / 55 * 100 + '%';
+    backBarEl.className = 'dti-bar-fill ' + (backDTI <= 36 ? 'bar-green' : backDTI <= 43 ? 'bar-yellow' : 'bar-red');
+
+    // Summary lines
+    document.getElementById('sumPITI').textContent = fmtCents(totalPITI);
+    document.getElementById('sumNonHousing').textContent = fmt(nonHousing);
+    document.getElementById('sumTotal').textContent = fmtCents(totalObligations);
+
+    const remEl = document.getElementById('sumRemaining');
+    remEl.textContent = fmtCents(remaining);
+    remEl.className = 'sl-value ' + (remaining >= 0 ? 'positive' : 'negative');
+  }
+
+  // ─── Clear all data ───
+  document.getElementById('btnClear').addEventListener('click', () => {
+    if (confirm('Clear all saved data? This cannot be undone.')) {
+      localStorage.removeItem(STORE_KEY);
+      store = getDefaults();
+      populateScalars();
+      renderCC();
+      renderDebts();
+      recalc();
+    }
+  });
+
+  // ─── Utils ───
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ─── Init ───
+  populateScalars();
+  renderCC();
+  renderDebts();
+  recalc();
+})();
+</script>
+</body>
+</html>
