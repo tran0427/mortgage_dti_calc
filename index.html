@@ -677,7 +677,7 @@
     return {
       income: '', coIncome: '',
       purchasePrice: '', downPayment: '',
-      loanTerm: '360', interestRate: '',
+      loanTerm: '360', interestRate: '6.5',
       propTax: '', insurance: '', hoa: '', pmi: '',
       creditCards: [],
       debts: []
@@ -875,8 +875,7 @@
 
   // ─── Calculate P&I ───
   function calcPI(principal, annualRate, months) {
-    if (principal <= 0 || months <= 0) return 0;
-    if (annualRate <= 0) return principal / months;
+    if (principal <= 0 || months <= 0 || annualRate <= 0) return 0;
     const r = annualRate / 100 / 12;
     return principal * (r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
   }
